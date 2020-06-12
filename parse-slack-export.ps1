@@ -1,8 +1,9 @@
 $exportPath = "C:\Users\Daniel\Downloads\slack\" #this should be were your extracted your slack export
+Clear-Host
+$directories = $null
 
 $dms = Get-Content ($exportPath + "dms.json") | ConvertFrom-Json
 $users = Get-Content ($exportPath + "users.json") | ConvertFrom-Json
-$hash = @{}
 
 #region Unused API stuff
 <#
@@ -25,36 +26,55 @@ function ConvertUnixTime($timestamp) {
     $date = (Get-Date 01.01.1970).AddSeconds($timestamp)
     return $date
 }
-#endregion
 
-#region Rename DM folders
-foreach($dm in $dms){
-    $user1 = GetUserRealName($dm.members[0])
-    $user2 = GetUserRealName($dm.members[1])
-    $names = $user1 + "-" + $user2
-    $hash.Add($dm.id,$names)
-}
-
-foreach($item in $hash.keys) {
-    $path = $exportPath + $item
-    $newPath = $exportPath + $item + "-" + $hash.$item
-    $newPath = $newPath.Replace("contractor","con")
-    $newPath = $newPath.Replace("contracto","con")
-    $newPath = $newPath.Replace("contract","con")
-    $newPath = $newPath.Replace("contrac","con")
-    $newPath = $newPath.Replace("contra","con")
-    $newPath = $newPath.Replace("contr","con")
-    $newPath = $newPath.Replace("_cont","_con")
-    if(Test-Path $path) {
-        Rename-Item -Path $path -NewName $newPath
+function RenameDirectories($path,$newPath) {
+    if((Test-Path $path) -and $newPath) {
+        $newPath = $newPath.Replace("_contractor","_con")
+        $newPath = $newPath.Replace("_contracto","_con")
+        $newPath = $newPath.Replace("_contract","_con")
+        $newPath = $newPath.Replace("_contrac","_con")
+        $newPath = $newPath.Replace("_contra","_con")
+        $newPath = $newPath.Replace("_contr","_con")
+        $newPath = $newPath.Replace("_cont","_con")
+        $newPath = $newPath.Replace("--","-")
+        if($path -ne $newPath) {
+            Rename-Item -Path $path -NewName $newPath
+            $newPath
+        }
     }
 }
 #endregion
 
+#region Rename DM folders
+Write-Output "Building DM user hash--this could take a while."
+$hash = @{}
+foreach($dm in $dms){
+    $dmUser1 = GetUserRealName($dm.members[0])
+    $dmUser2 = GetUserRealName($dm.members[1])
+    $dmUsers = $dmUser1 + "-" + $dmUser2
+    $hash.Add($dm.id,$dmUsers)
+}
+Write-Output "Renaming DM folders."
+foreach($item in $hash.keys) {
+    $path = $exportPath + $item
+    $newPath = $exportPath + $item + "-" + $hash.$item
+    RenameDirectories $path, $newPath
+
+}
+#  Rename mpdm folders
+Write-Output "Renaming mpdm folders."
+$directories = Get-ChildItem $exportPath
+
+foreach($directory in $directories) {
+    RenameDirectories $directory.fullname $directory.fullname
+}
+#endregion
+$directories = $null
 #region Combine and convert JSON to HTML
 $directories = Get-ChildItem $exportPath
 
 foreach($directory in $directories) {
+    #  Skip folder that already have an html file in them
     if(Get-ChildItem $directory -Filter *.html) {
         Write-Output "Skipping " $directory
     } else {
