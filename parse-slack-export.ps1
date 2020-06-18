@@ -75,12 +75,13 @@ $directories = Get-ChildItem $exportPath
 
 foreach($directory in $directories) {
     #  Skip folder that already have an html file in them
-    if(Get-ChildItem $directory -Filter *.html) {
+    $htmlExists = Get-ChildItem $directory.FullName -Filter *.html
+    if($htmlExists -and ($htmlExists.Length -ne 0)) {
         Write-Output "Skipping " $directory
     } else {
         $htmlFile = $directory.FullName + "\all.html"
         New-Item -Force $htmlFile
-        $jsonFiles = Get-ChildItem $directory -Exclude *.html
+        $jsonFiles = Get-ChildItem $directory.FullName -Exclude *.html
         foreach($jsonFile in $jsonFiles) {
             $jsonObjs = Get-Content $jsonFile.FullName | ConvertFrom-Json
             $hash = @{}
