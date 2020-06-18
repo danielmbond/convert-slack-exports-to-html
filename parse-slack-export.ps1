@@ -48,13 +48,13 @@ function RenameDirectories($path,$newPath) {
 
 #region Rename DM folders
 Write-Output "Building DM user hash--this could take a while."
-$hash = @{}
+<#$hash = @{}
 foreach($dm in $dms){
     $dmUser1 = GetUserRealName($dm.members[0])
     $dmUser2 = GetUserRealName($dm.members[1])
     $dmUsers = $dmUser1 + "-" + $dmUser2
     $hash.Add($dm.id,$dmUsers)
-}
+}#>
 Write-Output "Renaming DM folders."
 foreach($item in $hash.keys) {
     $path = $exportPath + $item
@@ -94,12 +94,12 @@ foreach($directory in $directories) {
                 $message = $null
                 $title = $null
                 $timestamp = ConvertUnixTime $jsonObj.ts
-                $user = GetUserRealName $jsonObj.user
+                $user = $jsonObj.user_profile.real_name
                 if ($user -eq $null) {
-                    $user = $jsonObj.username
+                    $user = GetUserRealName $jsonObj.user
                 }
-                if ($user -eq $null) {
-                    $user = $jsonObj.user
+                if ($user -eq $null -or $user -eq "") {
+                    $user = $jsonObj.username
                 }
                 #  If the message is an Edit append Edit and bold it.
                 $message = $jsonObj.text
