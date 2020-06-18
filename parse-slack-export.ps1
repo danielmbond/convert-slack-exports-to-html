@@ -1,4 +1,5 @@
 $exportPath = "C:\Users\Daniel\Downloads\slack\" #this should be were your extracted your slack export
+$overwrite = $true #overwrite existing html files
 Clear-Host
 $directories = $null
 
@@ -76,7 +77,7 @@ $directories = Get-ChildItem $exportPath
 foreach($directory in $directories) {
     #  Skip folder that already have an html file in them
     $htmlExists = Get-ChildItem $directory.FullName -Filter *.html
-    if($htmlExists -and ($htmlExists.Length -ne 0)) {
+    if($htmlExists -and ($htmlExists.Length -ne 0) -and $overwrite -eq $false) {
         Write-Output "Skipping " $directory
     } else {
         $htmlFile = $directory.FullName + "\all.html"
@@ -96,6 +97,9 @@ foreach($directory in $directories) {
                 $user = GetUserRealName $jsonObj.user
                 if ($user -eq $null) {
                     $user = $jsonObj.username
+                }
+                if ($user -eq $null) {
+                    $user = $jsonObj.user
                 }
                 #  If the message is an Edit append Edit and bold it.
                 $message = $jsonObj.text
