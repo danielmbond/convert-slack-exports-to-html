@@ -1,6 +1,8 @@
 #  Parse Slack exports into html files.
 
 $exportPath = "C:\Users\Daniel\Downloads\slack\" #this should be were your extracted your slack export
+
+$pictures = $false #put the picutures in the HTML
 $overwrite = $false #overwrite existing html files
 $rebuildhash = $false #rebuild the dm hash even if it's not empty
 
@@ -24,6 +26,11 @@ $global:teams = Invoke-RestMethod -Method Post -Uri $teamListAPI
 function GetUserRealName($id) {
     $user = $Global:users.Where({$_.id -eq $id})
     return $user.profile.real_name
+}
+
+function GetUserPicture($id) {
+    $user = $Global:users.Where({$_.id -eq $id})
+    return $user.profile.image_24
 }
 
 function ConvertUnixTime($timestamp) {
@@ -94,6 +101,7 @@ foreach($directory in $directories) {
                 $user = $null
                 $message = $null
                 $title = $null
+                $userPicture = $null
                 $timestamp = ConvertUnixTime $jsonObj.ts
                 $user = $jsonObj.user_profile.real_name
                 if ($user -eq $null) {
@@ -102,13 +110,21 @@ foreach($directory in $directories) {
                 if ($user -eq $null -or $user -eq "") {
                     $user = $jsonObj.username
                 }
+                if($pictures) {
+                    $userPicture = GetUserPicture $jsonObj.user
+                    if($userPicture) {
+                        $userPicture = "<img src=`"$userPicture`">"
+                    } else {
+                        $userPicture = $null
+                    }
+                }
                 #  If the message is an Edit append Edit and bold it.
                 $message = $jsonObj.text
                 if ($message -eq $null) {
                     $message = "<b>Edit</b> " + $jsonObj.message.text
                 }
                 $title = $jsonObj.attachments.title
-                $text = $timestamp.ToString() + " " + $user + " " + $message + " " + $title + "<br>"
+                $text = $timestamp.ToString() + " " + $user + $userPicture + " " + $message + " " + $title + "<br>"
                 $p = '<@\w+>'
                 [regex]$regex = '<@\w+>'
                 $matchValue = ([regex]::matches($text, $p) | %{$_.value})
