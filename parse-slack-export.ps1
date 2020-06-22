@@ -1,11 +1,14 @@
+#  Parse Slack exports into html files.
+
 $exportPath = "C:\Users\Daniel\Downloads\slack\" #this should be were your extracted your slack export
-$overwrite = $true #overwrite existing html files
+$overwrite = $false #overwrite existing html files
+$rebuildhash = $false #rebuild the dm hash even if it's not empty
+
 Clear-Host
 $directories = $null
 
 $dms = Get-Content ($exportPath + "dms.json") | ConvertFrom-Json
-$users = Get-Content ($exportPath + "users.json") | ConvertFrom-Json
-
+$Global:users = Get-Content ($exportPath + "users.json") | ConvertFrom-Json
 #region Unused API stuff
 <#
 Was using the APIs for info before I noticed the files in the root export folder.
@@ -19,7 +22,7 @@ $global:teams = Invoke-RestMethod -Method Post -Uri $teamListAPI
 
 #region Functions
 function GetUserRealName($id) {
-    $user = $global:users.members.Where({$_.id -eq $id})
+    $user = $Global:users.Where({$_.id -eq $id})
     return $user.profile.real_name
 }
 
@@ -30,17 +33,16 @@ function ConvertUnixTime($timestamp) {
 
 function RenameDirectories($path,$newPath) {
     if((Test-Path $path) -and $newPath) {
-        $newPath = $newPath.Replace("_contractor","_con")
-        $newPath = $newPath.Replace("_contracto","_con")
-        $newPath = $newPath.Replace("_contract","_con")
-        $newPath = $newPath.Replace("_contrac","_con")
-        $newPath = $newPath.Replace("_contra","_con")
-        $newPath = $newPath.Replace("_contr","_con")
-        $newPath = $newPath.Replace("_cont","_con")
+        $newPath = $newPath.Replace("_contractor","_c")
+        $newPath = $newPath.Replace("_contracto","_c")
+        $newPath = $newPath.Replace("_contract","_c")
+        $newPath = $newPath.Replace("_contrac","_c")
+        $newPath = $newPath.Replace("_contra","_c")
+        $newPath = $newPath.Replace("_contr","_c")
+        $newPath = $newPath.Replace("_cont","_c")
         $newPath = $newPath.Replace("--","-")
         if($path -ne $newPath) {
             Rename-Item -Path $path -NewName $newPath
-            $newPath
         }
     }
 }
@@ -48,19 +50,20 @@ function RenameDirectories($path,$newPath) {
 
 #region Rename DM folders
 Write-Output "Building DM user hash--this could take a while."
+
 $hash = @{}
 foreach($dm in $dms){
-    $dmUser1 = GetUserRealName($dm.members[0])
-    $dmUser2 = GetUserRealName($dm.members[1])
+    $dmUser1 = GetUserRealName $dm.members[0]
+    $dmUser2 = GetUserRealName $dm.members[1]
     $dmUsers = $dmUser1 + "-" + $dmUser2
     $hash.Add($dm.id,$dmUsers)
 }
+
 Write-Output "Renaming DM folders."
 foreach($item in $hash.keys) {
     $path = $exportPath + $item
     $newPath = $exportPath + $item + "-" + $hash.$item
-    RenameDirectories $path, $newPath
-
+    RenameDirectories $path $newPath
 }
 #  Rename mpdm folders
 Write-Output "Renaming mpdm folders."
@@ -72,11 +75,11 @@ foreach($directory in $directories) {
 #endregion
 $directories = $null
 #region Combine and convert JSON to HTML
-$directories = Get-ChildItem $exportPath
+$directories = Get-ChildItem $exportPath | ?{ $_.PSIsContainer }
 
 foreach($directory in $directories) {
     #  Skip folder that already have an html file in them
-    $htmlExists = Get-ChildItem $directory.FullName -Filter *.html
+    $htmlExists = Get-ChildItem $directory.FullName -Filter *.html 
     if($htmlExists -and ($htmlExists.Length -ne 0) -and $overwrite -eq $false) {
         Write-Output "Skipping " $directory
     } else {
@@ -85,8 +88,6 @@ foreach($directory in $directories) {
         $jsonFiles = Get-ChildItem $directory.FullName -Exclude *.html
         foreach($jsonFile in $jsonFiles) {
             $jsonObjs = Get-Content $jsonFile.FullName | ConvertFrom-Json
-            $hash = @{}
-            $hash.Add("a","a")
             foreach($jsonObj in $jsonObjs) {
                 $message = $null
                 $timestamp = $null
