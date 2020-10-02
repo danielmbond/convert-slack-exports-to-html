@@ -48,6 +48,7 @@ function RenameDirectories($path,$newPath) {
         $newPath = $newPath.Replace("_contr","_c")
         $newPath = $newPath.Replace("_cont","_c")
         $newPath = $newPath.Replace("--","-")
+        $newPath = $newPath.Replace("/","-")
         if($path -ne $newPath) {
             Rename-Item -Path $path -NewName $newPath
         }
