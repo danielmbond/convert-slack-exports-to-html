@@ -48,7 +48,6 @@ function RenameDirectories($path,$newPath) {
         $newPath = $newPath.Replace("_contr","_c")
         $newPath = $newPath.Replace("_cont","_c")
         $newPath = $newPath.Replace("--","-")
-        $newPath = $newPath.Replace("/","-")
         if($path -ne $newPath) {
             Rename-Item -Path $path -NewName $newPath
         }
@@ -70,7 +69,9 @@ foreach($dm in $dms){
 Write-Output "Renaming DM folders."
 foreach($item in $hash.keys) {
     $path = $exportPath + $item
-    $newPath = $exportPath + $item + "-" + $hash.$item
+    $hashNames = $hash.$item
+    [System.IO.Path]::GetInvalidFileNameChars() | % {$hashNames = $hashNames.replace($_,' ')}
+    $newPath = $exportPath + $item + "-" + $hashNames
     RenameDirectories $path $newPath
 }
 #  Rename mpdm folders
