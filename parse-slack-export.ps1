@@ -1,10 +1,12 @@
 #  Parse Slack exports into html files.
 
-$exportPath = "C:\Users\Daniel\Downloads\slack\" #this should be were your extracted your slack export
+$exportPath = "slack\" #this should be were your extracted your slack export
 
-$pictures = $false #put the picutures in the HTML
-$overwrite = $false #overwrite existing html files
-$rebuildhash = $false #rebuild the dm hash even if it's not empty
+$pictures = $true #put the picutures in the HTML
+$overwrite = $true #overwrite existing html files
+$rebuildhash = $true #rebuild the dm hash even if it's not empty
+$file_pictures = $true # Pictures from Files Array.
+$build_index = $true # Build an HTML Index with Links to Results
 
 Clear-Host
 $directories = $null
@@ -86,6 +88,10 @@ $directories = $null
 #region Combine and convert JSON to HTML
 $directories = Get-ChildItem $exportPath | ?{ $_.PSIsContainer }
 
+if ($build_index) {
+	$menuHTMLFile = ".\menu.html"
+	New-Item -Force $menuHTMLFile
+}
 foreach($directory in $directories) {
     #  Skip folder that already have an html file in them
     $htmlExists = Get-ChildItem $directory.FullName -Filter *.html 
@@ -94,6 +100,15 @@ foreach($directory in $directories) {
     } else {
         $htmlFile = $directory.FullName + "\all.html"
         New-Item -Force $htmlFile
+		
+		if ($build_index) {
+			# Master HTML File
+			Write-Output "Dir: " + $menuHTMLFile
+			Write-Output $directory.Name
+			$link = "<a href=`"/" + $htmlFile + "`" target=`"iframe_main`">#" + $directory.Name + "</a><br>"
+			Add-Content -Path $menuHTMLFile -Value $link |Out-Null
+		}
+		
         $jsonFiles = Get-ChildItem $directory.FullName -Exclude *.html
         foreach($jsonFile in $jsonFiles) {
             $jsonObjs = Get-Content $jsonFile.FullName | ConvertFrom-Json
@@ -104,6 +119,7 @@ foreach($directory in $directories) {
                 $message = $null
                 $title = $null
                 $userPicture = $null
+				$filePictures = $null
                 $timestamp = ConvertUnixTime $jsonObj.ts
                 $user = $jsonObj.user_profile.real_name
                 if ($user -eq $null) {
@@ -115,18 +131,28 @@ foreach($directory in $directories) {
                 if($pictures) {
                     $userPicture = GetUserPicture $jsonObj.user
                     if($userPicture) {
-                        $userPicture = "<img src=`"$userPicture`">"
+                        $userPicture = "<img src=`"$userPicture`" style=`"padding-right: 10px; padding-left: 10px`">"
                     } else {
                         $userPicture = $null
                     }
                 }
+				if ($file_pictures) {
+					if ($jsonObj.files) {
+						foreach ($file_picture in $jsonObj.files) {
+							$filePictures = -join($filePictures, " ", "<a href=`"" + $file_picture.url_private + "`" target=`"_blank`"><img src=`"" + $file_picture.thumb_480 + "`"></a>")
+						}
+					}
+				}
                 #  If the message is an Edit append Edit and bold it.
                 $message = $jsonObj.text
                 if ($message -eq $null) {
                     $message = "<b>Edit</b> " + $jsonObj.message.text
                 }
                 $title = $jsonObj.attachments.title
-                $text = $timestamp.ToString() + " " + $user + $userPicture + " " + $message + " " + $title + "<br>"
+                $text = $userPicture + $timestamp.ToString() + " " + $user + " " + $message + " " + $title + "<br>"
+				if ($filePictures) {
+					$text = -join($text, "<br>", $filePictures + "<br>")
+				}
                 $p = '<@\w+>'
                 [regex]$regex = '<@\w+>'
                 $matchValue = ([regex]::matches($text, $p) | %{$_.value})
@@ -135,6 +161,7 @@ foreach($directory in $directories) {
                     $replacement = "@" + (GetUserRealName $match.substring(2,$length))
                     $text = $text.Replace($match,$replacement)
                 }
+				$text = "<span style=`"text-align: center;`">" + $text + "</span>"
                 Add-Content -Path $htmlFile -Value $text |Out-Null
             }
         }
