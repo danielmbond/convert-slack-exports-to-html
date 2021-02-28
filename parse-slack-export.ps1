@@ -11,8 +11,8 @@ $build_index = $true # Build an HTML Index with Links to Results
 Clear-Host
 $directories = $null
 
-$dms = Get-Content ($exportPath + "dms.json") | ConvertFrom-Json
-$Global:users = Get-Content ($exportPath + "users.json") | ConvertFrom-Json
+$dms = Get-Content -Encoding "UTF8" ($exportPath + "dms.json") | ConvertFrom-Json
+$Global:users = Get-Content -Encoding "UTF8" ($exportPath + "users.json") | ConvertFrom-Json
 #region Unused API stuff
 <#
 Was using the APIs for info before I noticed the files in the root export folder.
@@ -111,7 +111,7 @@ foreach($directory in $directories) {
 		
         $jsonFiles = Get-ChildItem $directory.FullName -Exclude *.html
         foreach($jsonFile in $jsonFiles) {
-            $jsonObjs = Get-Content $jsonFile.FullName | ConvertFrom-Json
+            $jsonObjs = Get-Content -Encoding "UTF8" $jsonFile.FullName | ConvertFrom-Json
             foreach($jsonObj in $jsonObjs) {
                 $message = $null
                 $timestamp = $null
